@@ -13,11 +13,12 @@ import com.huawei.hms.maps.OnMapReadyCallback
 import com.huawei.hms.maps.model.*
 import kotlinx.android.synthetic.main.activity_map.*
 
+
 class Map : AppCompatActivity(), OnMapReadyCallback {
-    private var LAT_LNG: LatLng? = null
+    private var mLatLng: LatLng? = null
     private var hMap: HuaweiMap? = null
     private var mMarker: Marker? = null
-    var title: String? = null
+    var mTitle: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,8 +50,8 @@ class Map : AppCompatActivity(), OnMapReadyCallback {
 
         val lat = 30.0
         val ln = 31.1
-        title = "Address"
-        LAT_LNG = LatLng(lat, ln)
+        mTitle = "Address"
+        mLatLng = LatLng(lat, ln)
     }
 
     override fun onStart() {
@@ -72,21 +73,39 @@ class Map : AppCompatActivity(), OnMapReadyCallback {
 
         hMap = map
         hMap!!.isMyLocationEnabled = true
+        hMap?.uiSettings?.isMyLocationButtonEnabled = true
 
         // Move camera by CameraPosition param ,latlag and zoom params can set here
-        val build = CameraPosition.Builder().target(LAT_LNG).zoom(18f).build()
+        val build = CameraPosition.Builder().target(mLatLng).zoom(18f).build()
         val cameraUpdate = CameraUpdateFactory.newCameraPosition(build)
         hMap!!.animateCamera(cameraUpdate)
 
+        addMareker()
+
+        hMap!!.setOnMapClickListener { latLng ->
+
+            // Clear all Markers
+            hMap?.clear()
+
+            mLatLng = latLng
+            mTitle = "NewAddress"
+            addMareker()
+
+            mMarker!!.showInfoWindow()
+
+
+        }
+
+    }
+
+    private fun addMareker() {
         mMarker = hMap!!.addMarker(
-            MarkerOptions().position(LAT_LNG)
-                .alpha(0.5f)
-                .title(title)
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
+            MarkerOptions().position(mLatLng)
+                .title(mTitle)
                 .infoWindowAnchor(0.5f, 0.5f)
+                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
                 .clusterable(true)
         )
-
     }
 
     override fun onPause() {
