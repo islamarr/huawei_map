@@ -1,0 +1,30 @@
+{
+	"agcgw":{
+		"backurl":"connect-dre.dbankcloud.cn",
+		"url":"connect-dre.hispace.hicloud.com"
+	},
+	"client":{
+		"cp_id":"70971000000036118",
+		"product_id":"736430079244585270",
+		"client_id":"418014710386918464",
+		"client_secret":"850E1465E5BA0F82EA7441C7CECADCE177A0ACFBD846D096D25D5A903A783237",
+		"app_id":"102653539",
+		"package_name":"com.islam.huaweiapp",
+		"api_key":"CgB6e3x9YZdl8CAbOI8D5P/jYKCCS8zRa0U+9lzMR5Q0kPpYGJcnb4ccyAS25yQEyxoHuJfsytTdDYCzdtjiCUa5"
+	},
+	"service":{
+		"analytics":{
+			"collector_url":"datacollector-dre.dt.hicloud.com,datacollector-dre.dt.dbankcloud.cn",
+			"resource_id":"p1",
+			"channel_id":""
+		},
+		"cloudstorage":{
+			"storage_url":"https://ops-dre.agcstorage.link"
+		},
+		"ml":{
+			"mlservice_url":"ml-api-dre.ai.dbankcloud.com,ml-api-dre.ai.dbankcloud.cn"
+		}
+	},
+	"region":"DE",
+	"configuration_version":"1.0"
+}

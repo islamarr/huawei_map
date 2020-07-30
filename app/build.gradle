@@ -7,7 +7,7 @@ android {
 
     defaultConfig {
         applicationId "com.islam.huaweiapp"
-        minSdkVersion 17
+        minSdkVersion 19
         targetSdkVersion 30
         versionCode 1
         versionName "1.0"
@@ -15,12 +15,57 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    buildTypes {
+    signingConfigs {
         release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            keyAlias 'islam'
+            keyPassword '123456789'
+            storeFile file('../fortest.jks')
+            storePassword '123456789'
+        }
+
+        debug {
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file('../debug.keystore')
+            storePassword 'android'
         }
     }
+
+    buildTypes {
+
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    project.ext { appName = 'MapApp_' }
+                    def newName = output.outputFile.name
+                    newName = newName.replace("app-", "$project.ext.appName")
+                    newName = newName.replace("release", variant.versionName + "release")
+                    outputFileName = newName
+                }
+            }
+            signingConfig signingConfigs.release
+        }
+
+        debug {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            applicationVariants.all { variant ->
+                variant.outputs.all { output ->
+                    project.ext { appName = 'MapApp_' }
+                    def newName = output.outputFile.name
+                    newName = newName.replace("app-", "$project.ext.appName")
+                    newName = newName.replace("debug", variant.versionName +  "debug")
+                    outputFileName = newName
+                }
+            }
+            signingConfig signingConfigs.debug
+        }
+    }
+
 }
 
 dependencies {
@@ -34,7 +79,10 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 
     //Huawei
-    implementation 'com.huawei.agconnect:agconnect-core:1.3.1.300'
+    implementation 'com.huawei.agconnect:agconnect-core:1.3.2.301'
+    implementation 'com.huawei.hms:location:5.0.0.302'
+    implementation 'com.huawei.hms:maps:5.0.0.300'
+    implementation 'com.huawei.hms:site:5.0.0.300'
 
 }
 
