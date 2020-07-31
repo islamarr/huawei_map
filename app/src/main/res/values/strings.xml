@@ -2,4 +2,6 @@
     <string name="app_name">HuaweiApp</string>
     <string name="huawei_api_key" translatable="false">CgB6e3x9YZdl8CAbOI8D5P/jYKCCS8zRa0U+9lzMR5Q0kPpYGJcnb4ccyAS25yQEyxoHuJfsytTdDYCzdtjiCUa5</string>
 
+    <string name="search">Searching....</string>
+    <string name="failed_locate">Failed to get location</string>
 </resources>

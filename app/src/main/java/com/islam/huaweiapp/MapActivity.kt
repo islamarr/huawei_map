@@ -9,7 +9,8 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.isVisible
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import com.huawei.hmf.tasks.Task
 import com.huawei.hms.common.ApiException
 import com.huawei.hms.common.ResolvableApiException
@@ -18,14 +19,17 @@ import com.huawei.hms.maps.CameraUpdateFactory
 import com.huawei.hms.maps.HuaweiMap
 import com.huawei.hms.maps.OnMapReadyCallback
 import com.huawei.hms.maps.model.*
+import com.islam.huaweiapp.utils.LocationHelper
 import com.islam.huaweiapp.utils.RequestPermission
+import com.islam.huaweiapp.viewModel.UpdateTitleViewModel
 import kotlinx.android.synthetic.main.activity_map.*
 
 
-class MapActivity : AppCompatActivity(), OnMapReadyCallback {
+class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClickListener {
     private var mLatLng: LatLng? = null
     private var hMap: HuaweiMap? = null
     private var mMarker: Marker? = null
+    private var mPin: Marker? = null
     private var mTitle: String? = "Searching...."
     private var lat: Double = 30.1
     private var long: Double = 31.1
@@ -35,12 +39,30 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var mLocationRequest: LocationRequest
     private var mLocationCallback: LocationCallback? = null
 
+    private lateinit var locationHelper: LocationHelper
+    private lateinit var model: UpdateTitleViewModel
+
+    companion object {
+        private const val TAG = "MapActivity"
+        private const val MAPVIEW_BUNDLE_KEY = "MapViewBundleKey"
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
 
         RequestPermission.requestLocationPermission(this)
+
+        model = ViewModelProvider(this).get(UpdateTitleViewModel::class.java)
+        locationHelper = LocationHelper(this, model)
+
+        model.title.observe(this, Observer {
+            mTitle = it
+
+            setMarker(true)
+
+        })
 
         // get mapView by layout view
         var mapViewBundle: Bundle? = null
@@ -63,6 +85,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
 
+        locationCallBack()
+
+    }
+
+    private fun locationCallBack() {
         if (null == mLocationCallback) {
             mLocationCallback = object : LocationCallback() {
                 override fun onLocationResult(locationResult: LocationResult?) {
@@ -71,23 +98,20 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                             locationResult.locations
                         if (locations.isNotEmpty()) {
                             for (location in locations) {
-                                Log.i(
-                                    TAG,
-                                    "onLocationResult location[Longitude,Latitude,Accuracy]:${location.longitude} , ${location.latitude} , ${location.accuracy}"
-                                )
-                                Toast.makeText(applicationContext, "onLocationResult location[Longitude,Latitude,Accuracy]:${location.longitude} , ${location.latitude}", Toast.LENGTH_SHORT).show()
 
                                 lat = location.latitude
                                 long = location.longitude
+
                                 mLatLng = LatLng(lat, long)
 
-                                val build = CameraPosition.Builder().target(mLatLng).zoom(12f).build()
+                                val build =
+                                    CameraPosition.Builder().target(mLatLng).zoom(12f).build()
                                 val cameraUpdate = CameraUpdateFactory.newCameraPosition(build)
                                 hMap!!.animateCamera(cameraUpdate)
 
                                 progressBar.visibility = View.GONE
-                                hMap?.clear()
-                                addMareker()
+
+                                setMarker(false)
 
                                 removeLocationUpdatesWithCallback()
                             }
@@ -103,10 +127,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 }
             }
         }
-
-        mTitle = "Searching...."
-        mLatLng = LatLng(lat, long)
-
     }
 
     override fun onStart() {
@@ -129,26 +149,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
 
         hMap = map
 
-        hMap!!.setOnMapClickListener { latLng ->
-
-            progressBar.visibility = View.GONE
-
-            // Clear all Markers
-            hMap?.clear()
-
-            mLatLng = latLng
-            mTitle = "NewAddress"
-            addMareker()
-
-            mMarker!!.showInfoWindow()
-
-        }
+        hMap!!.setOnMapClickListener(this)
 
         requestLocationUpdatesWithCallback()
 
     }
 
-    private fun addMareker() {
+    private fun setMarker(isShowInfo: Boolean) {
+        // Clear all Markers
+        hMap?.clear()
+
         mMarker = hMap!!.addMarker(
             MarkerOptions().position(mLatLng)
                 .title(mTitle)
@@ -156,6 +166,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
                 .clusterable(true)
         )
+        if (isShowInfo) mMarker!!.showInfoWindow()
     }
 
     override fun onPause() {
@@ -173,13 +184,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         mapView!!.onLowMemory()
     }
 
-    companion object {
-        private const val TAG = "MapActivity"
-        private const val MAPVIEW_BUNDLE_KEY = "MapViewBundleKey"
-        private const val REQUEST_CODE = 100
-
-    }
-
     private fun requestLocationUpdatesWithCallback() {
         try {
             val builder = LocationSettingsRequest.Builder()
@@ -187,12 +191,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
             val locationSettingsRequest = builder.build()
             // check devices settings before request location updates.
             //Before requesting location update, invoke checkLocationSettings to check device settings.
-            val locationSettingsResponseTask: Task<LocationSettingsResponse> = settingsClient.checkLocationSettings(locationSettingsRequest)
+            val locationSettingsResponseTask: Task<LocationSettingsResponse> =
+                settingsClient.checkLocationSettings(locationSettingsRequest)
 
             locationSettingsResponseTask.addOnSuccessListener { locationSettingsResponse: LocationSettingsResponse? ->
                 Log.i(TAG, "check location settings success  {$locationSettingsResponse}")
                 // request location updates
-                fusedLocationProviderClient.requestLocationUpdates(mLocationRequest, mLocationCallback, Looper.getMainLooper())
+                fusedLocationProviderClient.requestLocationUpdates(
+                    mLocationRequest,
+                    mLocationCallback,
+                    Looper.getMainLooper()
+                )
                     .addOnSuccessListener {
                         Log.i(TAG, "requestLocationUpdatesWithCallback onSuccess")
                     }
@@ -200,7 +209,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                         Log.e(TAG, "requestLocationUpdatesWithCallback onFailure:${e.message}")
                     }
             }
-                .addOnFailureListener { e: Exception -> Log.e(TAG, "checkLocationSetting onFailure:${e.message}")
+                .addOnFailureListener { e: Exception ->
+                    Log.e(TAG, "checkLocationSetting onFailure:${e.message}")
                     when ((e as ApiException).statusCode) {
                         LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> try {
                             val rae = e as ResolvableApiException
@@ -240,13 +250,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String?>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String?>,
+        grantResults: IntArray
+    ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 100) {
             if (grantResults.size > 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 Log.i(TAG, "onRequestPermissionsResult: apply LOCATION PERMISSION successful")
+                requestLocationUpdatesWithCallback()
             } else {
-                Log.i(TAG, "onRequestPermissionsResult: apply LOCATION PERMISSION  failed")
+                Toast.makeText(this, getString(R.string.failed_locate), Toast.LENGTH_LONG).show()
             }
         }
         if (requestCode == 200) {
@@ -256,9 +271,21 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback {
                     TAG,
                     "onRequestPermissionsResult: apply ACCESS_BACKGROUND_LOCATION successful"
                 )
+                requestLocationUpdatesWithCallback()
             } else {
-                Log.i(TAG, "onRequestPermissionsResult: apply ACCESS_BACKGROUND_LOCATION  failed")
+                Toast.makeText(this, getString(R.string.failed_locate), Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    override fun onMapClick(latLng: LatLng) {
+        progressBar.visibility = View.GONE
+
+        mLatLng = latLng
+        mTitle = getString(R.string.search)
+
+        locationHelper.setlocation(latLng.latitude, latLng.longitude)
+
+        setMarker(true)
     }
 }
