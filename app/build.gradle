@@ -58,7 +58,7 @@ android {
                     project.ext { appName = 'MapApp_' }
                     def newName = output.outputFile.name
                     newName = newName.replace("app-", "$project.ext.appName")
-                    newName = newName.replace("debug", variant.versionName +  "debug")
+                    newName = newName.replace("debug", variant.versionName + "debug")
                     outputFileName = newName
                 }
             }

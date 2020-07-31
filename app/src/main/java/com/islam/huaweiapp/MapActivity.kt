@@ -21,6 +21,7 @@ import com.huawei.hms.maps.OnMapReadyCallback
 import com.huawei.hms.maps.model.*
 import com.islam.huaweiapp.utils.AddressHelper
 import com.islam.huaweiapp.utils.RequestPermission
+import com.islam.huaweiapp.utils.Utils
 import com.islam.huaweiapp.viewModel.UpdateTitleViewModel
 import kotlinx.android.synthetic.main.activity_map.*
 
@@ -54,6 +55,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_map)
+
+        if (!Utils.isOnline(this)) {
+            progressBar.visibility = View.GONE
+            Toast.makeText(this, getString(R.string.no_internet), Toast.LENGTH_LONG).show()
+            return
+        }
 
         RequestPermission.requestLocationPermission(this)
 
