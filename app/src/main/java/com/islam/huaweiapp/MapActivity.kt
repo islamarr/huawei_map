@@ -57,6 +57,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
 
         RequestPermission.requestLocationPermission(this)
 
+        prepareLocation()
+
+        locationCallBack()
+
+
         updateTitleViewModel = ViewModelProvider(this).get(UpdateTitleViewModel::class.java)
         addressHelper = AddressHelper(this, updateTitleViewModel)
 
@@ -64,11 +69,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
 
             mTitle = it
 
-            progressBar.visibility = View.GONE
-
             if (isUpdateMyLocation) {
                 myTitle = mTitle
             }
+
+            progressBar.visibility = View.GONE
 
             setMarkers()
 
@@ -85,11 +90,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
             onCreate(mapViewBundle)
             getMapAsync(this@MapActivity)
         }
-
-
-        prepareLocation()
-
-        locationCallBack()
 
     }
 
@@ -147,22 +147,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
         hMap!!.animateCamera(cameraUpdate)
     }
 
-    override fun onStart() {
-        super.onStart()
-        mapView!!.onStart()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        mapView!!.onStop()
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        removeLocationUpdatesWithCallback()
-        mapView!!.onDestroy()
-    }
-
     override fun onMapReady(map: HuaweiMap) {
 
         hMap = map
@@ -208,6 +192,22 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
                     .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
                     .clusterable(true)
             )
+    }
+
+    override fun onStart() {
+        super.onStart()
+        mapView!!.onStart()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mapView!!.onStop()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        removeLocationUpdatesWithCallback()
+        mapView!!.onDestroy()
     }
 
     override fun onPause() {
