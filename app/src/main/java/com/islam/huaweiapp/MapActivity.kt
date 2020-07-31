@@ -27,12 +27,15 @@ import kotlinx.android.synthetic.main.activity_map.*
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClickListener {
     private var mLatLng: LatLng? = null
+    private var myLatLng: LatLng? = null
     private var hMap: HuaweiMap? = null
     private var mMarker: Marker? = null
-    private var mPin: Marker? = null
+    private lateinit var markerOptions: MarkerOptions
     private var mTitle: String? = "Searching...."
+    private var myTitle: String? = "Searching...."
     private var lat: Double = 30.1
     private var long: Double = 31.1
+    private var updateMyLocation: Boolean = false
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var settingsClient: SettingsClient
@@ -58,9 +61,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
         locationHelper = LocationHelper(this, model)
 
         model.title.observe(this, Observer {
+
             mTitle = it
 
-            setMarker(true)
+            progressBar.visibility = View.GONE
+
+            if (updateMyLocation) {
+                myTitle = mTitle
+            }
+
+            setMarkers()
 
         })
 
@@ -103,15 +113,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
                                 long = location.longitude
 
                                 mLatLng = LatLng(lat, long)
+                                myLatLng = mLatLng
 
-                                val build =
-                                    CameraPosition.Builder().target(mLatLng).zoom(12f).build()
-                                val cameraUpdate = CameraUpdateFactory.newCameraPosition(build)
-                                hMap!!.animateCamera(cameraUpdate)
+                                animateCamera()
 
-                                progressBar.visibility = View.GONE
-
-                                setMarker(false)
+                                updateMyLocation = true
+                                locationHelper.setlocation(lat, long)
 
                                 removeLocationUpdatesWithCallback()
                             }
@@ -127,6 +134,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
                 }
             }
         }
+    }
+
+    private fun animateCamera() {
+        val build =
+            CameraPosition.Builder().target(mLatLng).zoom(12f).build()
+        val cameraUpdate = CameraUpdateFactory.newCameraPosition(build)
+        hMap!!.animateCamera(cameraUpdate)
     }
 
     override fun onStart() {
@@ -155,18 +169,35 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
 
     }
 
-    private fun setMarker(isShowInfo: Boolean) {
-        // Clear all Markers
-        hMap?.clear()
+    private fun setMarkers() {
+        hMap!!.clear()
 
-        mMarker = hMap!!.addMarker(
-            MarkerOptions().position(mLatLng)
-                .title(mTitle)
+        hMap!!.addMarker(
+            MarkerOptions().position(myLatLng)
+                .title(myTitle)
                 .infoWindowAnchor(0.5f, 0.5f)
                 .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
                 .clusterable(true)
         )
-        if (isShowInfo) mMarker!!.showInfoWindow()
+
+        if (!updateMyLocation) {
+
+            mMarker = hMap!!.addMarker(
+                MarkerOptions().position(mLatLng)
+                    .title(mTitle)
+                    .infoWindowAnchor(0.5f, 0.5f)
+                    .clusterable(true)
+            )
+
+            mMarker!!.showInfoWindow()
+
+        } else {
+
+            mLatLng = LatLng(lat + .02, long + .02)
+
+            mMarker = hMap!!.addMarker(MarkerOptions().position(mLatLng))
+        }
+
     }
 
     override fun onPause() {
@@ -284,8 +315,11 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
         mLatLng = latLng
         mTitle = getString(R.string.search)
 
+        updateMyLocation = false
         locationHelper.setlocation(latLng.latitude, latLng.longitude)
 
-        setMarker(true)
+        animateCamera()
+
+        setMarkers()
     }
 }
