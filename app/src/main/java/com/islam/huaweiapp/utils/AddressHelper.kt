@@ -2,6 +2,7 @@ package com.islam.huaweiapp.utils
 
 import android.app.Activity
 import android.util.Log
+import com.huawei.hms.maps.model.LatLng
 import com.huawei.hms.site.api.SearchResultListener
 import com.huawei.hms.site.api.SearchService
 import com.huawei.hms.site.api.SearchServiceFactory
@@ -14,7 +15,7 @@ import com.islam.huaweiapp.viewModel.UpdateTitleViewModel
 import java.io.UnsupportedEncodingException
 import java.net.URLEncoder
 
-class LocationHelper(activity: Activity, var model: UpdateTitleViewModel) {
+class AddressHelper(activity: Activity, var updateTitleViewModel: UpdateTitleViewModel) {
     private val TAG = "LocationHelper"
     private var searchService: SearchService? = null
 
@@ -32,26 +33,29 @@ class LocationHelper(activity: Activity, var model: UpdateTitleViewModel) {
         }
     }
 
-    fun setlocation(latitude: Double, longitude: Double) {
+    fun requestAddress(latLng: LatLng) {
+        val emptyAddress = "No address available here!"
         val request = NearbySearchRequest()
-        val location = Coordinate(latitude, longitude)
+        val location = Coordinate(latLng.latitude, latLng.longitude)
         request.location = location
         val resultListener: SearchResultListener<NearbySearchResponse?> =
             object : SearchResultListener<NearbySearchResponse?> {
                 // Return search results upon a successful search.
                 override fun onSearchResult(results: NearbySearchResponse?) {
                     if (results == null || results.totalCount <= 0) {
+                        updateTitleViewModel.updateTitle(emptyAddress)
                         return
                     }
                     val sites = results.sites
                     if (sites == null || sites.size == 0) {
+                        updateTitleViewModel.updateTitle(emptyAddress)
                         return
                     }
                     for (site in sites) {
 
                         val address = site.formatAddress
 
-                        model.updateTitle(address)
+                        updateTitleViewModel.updateTitle(address)
 
                         break
                     }

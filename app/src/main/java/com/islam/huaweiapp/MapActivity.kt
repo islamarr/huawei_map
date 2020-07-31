@@ -19,36 +19,36 @@ import com.huawei.hms.maps.CameraUpdateFactory
 import com.huawei.hms.maps.HuaweiMap
 import com.huawei.hms.maps.OnMapReadyCallback
 import com.huawei.hms.maps.model.*
-import com.islam.huaweiapp.utils.LocationHelper
+import com.islam.huaweiapp.utils.AddressHelper
 import com.islam.huaweiapp.utils.RequestPermission
 import com.islam.huaweiapp.viewModel.UpdateTitleViewModel
 import kotlinx.android.synthetic.main.activity_map.*
 
 
 class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClickListener {
+
+    companion object {
+        private const val TAG = "MapActivity"
+        private const val MAPVIEW_BUNDLE_KEY = "MapViewBundleKey"
+    }
+
     private var mLatLng: LatLng? = null
     private var myLatLng: LatLng? = null
     private var hMap: HuaweiMap? = null
     private var mMarker: Marker? = null
-    private lateinit var markerOptions: MarkerOptions
     private var mTitle: String? = "Searching...."
     private var myTitle: String? = "Searching...."
     private var lat: Double = 30.1
     private var long: Double = 31.1
-    private var updateMyLocation: Boolean = false
+    private var isUpdateMyLocation: Boolean = false
 
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var settingsClient: SettingsClient
     private lateinit var mLocationRequest: LocationRequest
     private var mLocationCallback: LocationCallback? = null
 
-    private lateinit var locationHelper: LocationHelper
-    private lateinit var model: UpdateTitleViewModel
-
-    companion object {
-        private const val TAG = "MapActivity"
-        private const val MAPVIEW_BUNDLE_KEY = "MapViewBundleKey"
-    }
+    private lateinit var addressHelper: AddressHelper
+    private lateinit var updateTitleViewModel: UpdateTitleViewModel
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -57,16 +57,16 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
 
         RequestPermission.requestLocationPermission(this)
 
-        model = ViewModelProvider(this).get(UpdateTitleViewModel::class.java)
-        locationHelper = LocationHelper(this, model)
+        updateTitleViewModel = ViewModelProvider(this).get(UpdateTitleViewModel::class.java)
+        addressHelper = AddressHelper(this, updateTitleViewModel)
 
-        model.title.observe(this, Observer {
+        updateTitleViewModel.title.observe(this, Observer {
 
             mTitle = it
 
             progressBar.visibility = View.GONE
 
-            if (updateMyLocation) {
+            if (isUpdateMyLocation) {
                 myTitle = mTitle
             }
 
@@ -87,6 +87,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
         }
 
 
+        prepareLocation()
+
+        locationCallBack()
+
+    }
+
+    private fun prepareLocation() {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         settingsClient = LocationServices.getSettingsClient(this)
         mLocationRequest = LocationRequest().apply {
@@ -94,9 +101,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
             needAddress = true
             priority = LocationRequest.PRIORITY_HIGH_ACCURACY
         }
-
-        locationCallBack()
-
     }
 
     private fun locationCallBack() {
@@ -115,12 +119,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
                                 mLatLng = LatLng(lat, long)
                                 myLatLng = mLatLng
 
-                                animateCamera()
-
-                                updateMyLocation = true
-                                locationHelper.setlocation(lat, long)
+                                isUpdateMyLocation = true
+                                addressHelper.requestAddress(myLatLng!!)
 
                                 removeLocationUpdatesWithCallback()
+
+                                animateCamera()
                             }
                         }
                     }
@@ -170,17 +174,12 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
     }
 
     private fun setMarkers() {
+        // Clear all Markers
         hMap!!.clear()
 
-        hMap!!.addMarker(
-            MarkerOptions().position(myLatLng)
-                .title(myTitle)
-                .infoWindowAnchor(0.5f, 0.5f)
-                .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
-                .clusterable(true)
-        )
+        myLocationMarker()
 
-        if (!updateMyLocation) {
+        if (!isUpdateMyLocation) {
 
             mMarker = hMap!!.addMarker(
                 MarkerOptions().position(mLatLng)
@@ -198,6 +197,17 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
             mMarker = hMap!!.addMarker(MarkerOptions().position(mLatLng))
         }
 
+    }
+
+    private fun myLocationMarker() {
+        if (myLatLng != null)
+            hMap!!.addMarker(
+                MarkerOptions().position(myLatLng)
+                    .title(myTitle)
+                    .infoWindowAnchor(0.5f, 0.5f)
+                    .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_star))
+                    .clusterable(true)
+            )
     }
 
     override fun onPause() {
@@ -220,25 +230,18 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
             val builder = LocationSettingsRequest.Builder()
             builder.addLocationRequest(mLocationRequest)
             val locationSettingsRequest = builder.build()
-            // check devices settings before request location updates.
-            //Before requesting location update, invoke checkLocationSettings to check device settings.
+
             val locationSettingsResponseTask: Task<LocationSettingsResponse> =
                 settingsClient.checkLocationSettings(locationSettingsRequest)
 
             locationSettingsResponseTask.addOnSuccessListener { locationSettingsResponse: LocationSettingsResponse? ->
                 Log.i(TAG, "check location settings success  {$locationSettingsResponse}")
-                // request location updates
+
                 fusedLocationProviderClient.requestLocationUpdates(
                     mLocationRequest,
                     mLocationCallback,
                     Looper.getMainLooper()
                 )
-                    .addOnSuccessListener {
-                        Log.i(TAG, "requestLocationUpdatesWithCallback onSuccess")
-                    }
-                    .addOnFailureListener { e ->
-                        Log.e(TAG, "requestLocationUpdatesWithCallback onFailure:${e.message}")
-                    }
             }
                 .addOnFailureListener { e: Exception ->
                     Log.e(TAG, "checkLocationSetting onFailure:${e.message}")
@@ -261,18 +264,6 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
     private fun removeLocationUpdatesWithCallback() {
         try {
             fusedLocationProviderClient.removeLocationUpdates(mLocationCallback)
-                .addOnSuccessListener {
-                    Log.i(
-                        TAG,
-                        "removeLocationUpdatesWithCallback onSuccess"
-                    )
-                }
-                .addOnFailureListener { e ->
-                    Log.e(
-                        TAG,
-                        "removeLocationUpdatesWithCallback onFailure:${e.message}"
-                    )
-                }
         } catch (e: Exception) {
             Log.e(
                 TAG,
@@ -315,8 +306,8 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
         mLatLng = latLng
         mTitle = getString(R.string.search)
 
-        updateMyLocation = false
-        locationHelper.setlocation(latLng.latitude, latLng.longitude)
+        isUpdateMyLocation = false
+        addressHelper.requestAddress(mLatLng!!)
 
         animateCamera()
 

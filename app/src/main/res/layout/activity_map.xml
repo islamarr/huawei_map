@@ -12,7 +12,7 @@
         android:layout_height="match_parent"
         map:cameraTargetLat="30.1"
         map:cameraTargetLng="31.1"
-        map:cameraZoom="5"
+        map:cameraZoom="4"
         map:mapType="normal"
         map:uiCompass="true"
         map:uiZoomControls="true" />
