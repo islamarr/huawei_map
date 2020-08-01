@@ -233,6 +233,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
     }
 
     private fun requestLocationUpdatesWithCallback() {
+        refreshBtn.visibility = View.GONE
         try {
             val builder = LocationSettingsRequest.Builder()
             builder.addLocationRequest(mLocationRequest)
@@ -252,6 +253,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
             }
                 .addOnFailureListener { e: Exception ->
                     Log.e(TAG, "checkLocationSetting onFailure:${e.message}")
+                    refreshBtn.visibility = View.VISIBLE
                     when ((e as ApiException).statusCode) {
                         LocationSettingsStatusCodes.RESOLUTION_REQUIRED -> try {
                             val rae = e as ResolvableApiException
@@ -264,6 +266,7 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
                     }
                 }
         } catch (e: Exception) {
+            refreshBtn.visibility = View.VISIBLE
             Log.e(TAG, "requestLocationUpdatesWithCallback exception:${e.message}")
         }
     }
@@ -319,5 +322,13 @@ class MapActivity : AppCompatActivity(), OnMapReadyCallback, HuaweiMap.OnMapClic
         animateCamera()
 
         setMarkers()
+    }
+
+    fun onClickButtons(view: View) {
+        when(view.id){
+            R.id.refreshBtn -> {
+                requestLocationUpdatesWithCallback()
+            }
+        }
     }
 }
